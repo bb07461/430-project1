@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+</head>
+<body>
+
+    <h1>Test Countries API</h1>
+
+    <div class="endpoint">
+        <h2>/api/countries <span class="methods">
+            <a href="#" class="get">GET</a>
+            <a href="#" class="head">HEAD</a>
+        </span></h2>
+        <div class="test-section">
+            <label for="countryName">Filter by Name:</label>
+            <input type="text" id="countryName" placeholder="e.g., Nigeria">
+            <button onclick="testGetCountries()">Send Request</button>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <h2>/api/countries/:code <span class="methods">
+            <a href="#" class="get">GET</a>
+        </span></h2>
+        <div class="test-section">
+            <label for="countryCode">Country Code:</label>
+            <input type="text" id="countryCode" placeholder="e.g., NG">
+            <button onclick="testGetCountry()">Send Request</button>
+        </div>
+    </div>
+
+    <div class="endpoint">
+        <h2>/api/countries <span class="methods">
+            <a href="#" class="post">POST</a>
+        </span></h2>
+        <div class="test-section">
+            <label for="newCountryName">Name:</label>
+            <input type="text" id="newCountryName" placeholder="Country Name">
+            <label for="newCountryCode">Code:</label>
+            <input type="text" id="newCountryCode" placeholder="e.g., NG">
+            <button onclick="testAddCountry()">Send Request</button>
+        </div>
+    </div>
+
+    <script>
+        async function testGetCountries() {
+            const name = document.getElementById("countryName").value;
+            let url = "/api/countries";
+            if (name) url += `?name=${name}`;
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                alert(JSON.stringify(data, null, 2));
+            } catch (error) {
+                alert("Error fetching countries");
+            }
+        }
+
+        async function testGetCountry() {
+            const code = document.getElementById("countryCode").value.toUpperCase();
+            if (!code) return alert("Please enter a country code");
+            try {
+                const res = await fetch(`/api/countries/${code}`);
+                const data = await res.json();
+                alert(JSON.stringify(data, null, 2));
+            } catch (error) {
+                alert("Error fetching country");
+            }
+        }
+
+        async function testAddCountry() {
+            const name = document.getElementById("newCountryName").value;
+            const code = document.getElementById("newCountryCode").value.toUpperCase();
+            if (!name || !code) return alert("Please fill in all fields");
+            try {
+                const res = await fetch("/api/countries", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, code }),
+                });
+                const data = await res.json();
+                alert(JSON.stringify(data, null, 2));
+            } catch (error) {
+                alert("Error adding country");
+            }
+        }
+    </script>
+
+</body>
+</html>
