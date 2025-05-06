@@ -32,8 +32,97 @@ images, videos, etc) must be served by your server
  */
 
 const http = require('http'); // pull in the http server module
+const url = require('url');
+const query = require('querystring');
+const fs = require('fs');
+const path = require('path');
 // pull in our html response handler file
 const htmlHandler = require('./htmlResponses.js');
+
 // pull in our json response handler file
 const jsonHandler = require('./jsonResponses.js');
 
+const countriesRaw = fs.readFileSync(path.join(__dirname, 'data/countries.json'));
+const countriesData = JSON.parse(countriesRaw);
+
+const port = process.env.PORT || 3000;
+
+// Set common headers
+const setHeaders = (res, contentType, content) => {
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Length', Buffer.byteLength(content));
+};
+
+const onRequest = (req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const { pathname, query: queryParams } = parsedUrl;
+
+  // HEAD & GET requests
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    switch (pathname) {
+      case '/':
+        return htmlHandler.getIndex(req, res, req.method === 'HEAD');
+
+      case '/style.css':
+        return htmlHandler.getCSS(req, res, req.method === 'HEAD');
+
+      case '/api/countries':
+        return jsonHandler.getAllCountries(req, res, countriesData, queryParams, req.method === 'HEAD');
+
+      case '/api/countries/region':
+        return jsonHandler.getCountriesByRegion(req, res, countriesData, queryParams, req.method === 'HEAD');
+
+      case '/api/countries/code':
+        return jsonHandler.getCountryByCode(req, res, countriesData, queryParams, req.method === 'HEAD');
+
+      case '/api/countries/nationality':
+        return jsonHandler.getByNationality(req, res, countriesData, queryParams, req.method === 'HEAD');
+
+      default:
+        return jsonHandler.notFound(req, res, req.method === 'HEAD');
+    }
+  }
+
+  // POST requests
+  if (req.method === 'POST') {
+    let body = '';
+
+    req.on('data', chunk => {
+      body += chunk;
+    });
+
+    req.on('end', () => {
+      const contentType = req.headers['content-type'];
+      let parsedBody = {};
+
+      if (contentType === 'application/json') {
+        try {
+          parsedBody = JSON.parse(body);
+        } catch (e) {
+          return jsonHandler.badRequest(res, 'Invalid JSON');
+        }
+      } else if (contentType === 'application/x-www-form-urlencoded') {
+        parsedBody = query.parse(body);
+      } else {
+        return jsonHandler.badRequest(res, 'Unsupported Content-Type');
+      }
+
+      if (pathname === '/api/countries/add') {
+        return jsonHandler.addCountry(req, res, countriesData, parsedBody);
+      }
+
+      if (pathname === '/api/countries/edit') {
+        return jsonHandler.editCountry(req, res, countriesData, parsedBody);
+      }
+
+      return jsonHandler.notFound(req, res);
+    });
+  }
+
+  // fallback
+  return jsonHandler.notFound(req, res);
+};
+
+http.createServer(onRequest).listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
